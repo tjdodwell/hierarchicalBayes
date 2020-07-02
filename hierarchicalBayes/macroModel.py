@@ -28,22 +28,10 @@ ffc_options = {"optimize": True, \
                "precompute_ip_const": True}
 
 
-class Generation_data():
+class MacroModel():
 
-    def __init__(self, mean = 0.0, stdev = 1.0,ell = 0.1, mkl = 32, N = 20):
+    def __init__(self, N = 5):
 
-        #
-
-        self.mkl = mkl
-
-        self.ell = ell
-
-        self.mean = mean
-        self.stdev = stdev
-
-        self.nu = 0.3
-
-        # Create mesh and define function space
         self.mesh = UnitCubeMesh(N, N, N)
 
         self.V = VectorFunctionSpace(self.mesh, "Lagrange", 1)
@@ -67,30 +55,24 @@ class Generation_data():
         self.bc.apply(self.vv.vector())
         self.top_dofs = where(self.vv.vector()==1.0)[0]
 
-    def computeEigenVectors(self):
+    def setData(self, data, sigma_f):
+        self.data = data
+        self.sigma_f = sigma_f
 
-        # Set up the random process on a SCALAR functionspace.
-        self.VV = FunctionSpace(self.mesh, "Lagrange", 1)
-        _dof_coords = self.VV.tabulate_dof_coordinates().reshape((-1, 3))
-        _dof_indices = self.VV.dofmap().dofs()
-        self.coords = _dof_coords[_dof_indices, :]
+    def apply(self, param, plotSolution = False, solutionFileName = "solution"):
 
-        self.random_process = Matern52(self.coords, self.ell)
-        self.random_process.compute_eigenpairs(self.mkl)
+        ## Unwrap parameters
 
-    def apply(self, parameters, plotField = False, fieldFileName = "RandomField.pvd", plotSolution = False, solutionFileName = "solution"):
-
-
-        ##########################################################################################
-
-        self.random_process.generate(self.mean, self.stdev, parameters)
-        ##########################################################################################
+        C01 = param[0]
+        C10 = param[1]
+        C11 = param[2]
+        D1 = param[3]
 
         # Define functions
         du = TrialFunction(self.V)            # Incremental displacement
         v  = TestFunction(self.V)             # Test function
         u  = Function(self.V)                 # Displacement from previous iteration
-    
+
         # Kinematics
         d = u.geometric_dimension()
         I = Identity(d)             # Identity tensor
@@ -98,20 +80,17 @@ class Generation_data():
         C = F.T*F                   # Right Cauchy-Green tensor
 
         # Invariants of deformation tensors
-        Ic = tr(C)
+        I1 = tr(C)
         J  = det(F)
 
-        #######################################################
-        # Elasticity parameters
-        E = Function(self.VV)
-        E.vector()[:] = np.exp(self.random_process.random_field)
-        if(plotField):
-            File(fieldFileName) << E
-        mu, lmbda = E/(2*(1 + self.nu)), E * self.nu/((1 + self.nu)*(1 - 2 * self.nu))
-        ########################################################
+        I2 = 0.5 * ( I1**2 - tr(C * C))
+
+        barI1 = J**(-2./3.) * I1
+
+        barI2 = J**(-4./3.) * I2
 
         # Stored strain energy density (compressible neo-Hookean model)
-        psi = (mu/2)*(Ic - 3) - mu*ln(J) + (lmbda/2)*(ln(J))**2
+        psi = C10 * (barI1 - 3.)  + C01 * (barI2 - 3.) + C11 * (barI1 - 3.) * (barI2 - 3.) + D1 * (J - 1.)**2
 
         # Total potential energy
         Pi = psi * dx
@@ -151,31 +130,12 @@ class Generation_data():
                     print(Force_top)
                     Force.append(Force_top)
 
-        return Force
+        #
+        assert len(Force) == len(self.data), "Force list not same length as data list"
 
-numSamples=12 #number of experiments
+        return -np.sum((np.asarray(Force) - np.asarray(self.data))**2)/ (2.0 * self.sigma_f**2)
 
-loadRandomField = False
 
-compressionTest = True
+compress_data = cPickle.load( open( "CompressionData.p", "rb" ) )
 
-Data_compression=[]
-data_realization = Generation_data(N = 10, mkl = 100)
-
-data_realization.computeEigenVectors()
-
-if(loadRandomField == False):
-    np.random.seed(123) # Fix seed to generates same experiments each time.
-    param = np.random.normal(size=(data_realization.mkl, numSamples))
-else:
-    param = cPickle.load( open( "randomfield.p", "rb" ) )
-
-for i in range(numSamples): # Generate Synthetic data for each experiment
-    if(compressionTest == True):
-        Data_compression.append(data_realization.apply(param[:,i], plotField = True, fieldFileName = "RandomField_" + str(i) + ".pvd"))
-    # Data_twist
-
-if(loadRandomField == False):
-    cPickle.dump(param, open( "randomfield.p", "wb" ) )
-
-cPickle.dump(Data_compression, open( "CompressionData.p", "wb" ) )
+numExperiments = len(compress_data)
