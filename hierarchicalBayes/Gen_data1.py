@@ -48,7 +48,7 @@ class Generation_data():
 
         self.loadSteps = 10   # cube [1,1,1] is pressed by 0.2 on top
         self.delta = 0.02
-        self.saveSolution = True
+
         self.verbosity = True
 
         # Find the top and bottom of my domain
@@ -76,7 +76,7 @@ class Generation_data():
         self.random_process = Matern52(self.coords, self.ell)
         self.random_process.compute_eigenpairs(self.mkl)
 
-    def apply(self, parameters):
+    def apply(self, parameters, plotField = False, fieldFileName = "RandomField.vtu", plotSolution = False, solutionFileName = "solution"):
 
 
         ##########################################################################################
@@ -105,7 +105,8 @@ class Generation_data():
         # Elasticity parameters
         E = Function(self.VV)
         E.vector()[:] = np.exp(self.random_process.random_field)
-        File("elasticity_gp0.pvd") << E
+        if(plotField):
+            File("elasticity_gp0.pvd") << E
         mu, lmbda = E/(2*(1 + self.nu)), E * self.nu/((1 + self.nu)*(1 - 2 * self.nu))
         ########################################################
 
@@ -137,8 +138,8 @@ class Generation_data():
                     solve(F == 0, u, bcs, J=J)
 
                     # Save solution in VTK format
-                    if(self.saveSolution):
-                        file = File("displacement_" + str(i) + ".pvd");
+                    if(plotSolution):
+                        file = File(solutionFileName + str(i) + ".pvd");
                         file << u;
 
                     # Output forces
@@ -150,14 +151,14 @@ class Generation_data():
                     print(Force_top)
                     Force.append(Force_top)
 
-        file = File("dispo.pvd");
-        file << u;
+        #file = File("dispo.pvd");
+        #file << u;
 
         return Force
 
 N=1 #number of experiments
 Data_i=[]
-data_realization = Generation_data(N = 25, mkl = 1000)
+data_realization = Generation_data(N = 5, mkl = 10)
 
 data_realization.computeEigenVectors()
 
