@@ -1,0 +1,8 @@
+*.vts
+*.vtu
+*.pvd
+__pycache__
+*.c
+*.so
+*.egg
+*.profraw
