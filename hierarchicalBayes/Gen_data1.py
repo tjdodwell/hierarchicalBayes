@@ -19,6 +19,8 @@ import seaborn as sns
 from typing import Tuple, List, Optional
 from scipy.stats import norm
 
+import _pickle as cPickle
+
 parameters["form_compiler"]["cpp_optimize"] = True
 ffc_options = {"optimize": True, \
                "eliminate_zeros": True, \
@@ -76,7 +78,7 @@ class Generation_data():
         self.random_process = Matern52(self.coords, self.ell)
         self.random_process.compute_eigenpairs(self.mkl)
 
-    def apply(self, parameters, plotField = False, fieldFileName = "RandomField.vtu", plotSolution = False, solutionFileName = "solution"):
+    def apply(self, parameters, plotField = False, fieldFileName = "RandomField.pvd", plotSolution = False, solutionFileName = "solution"):
 
 
         ##########################################################################################
@@ -106,7 +108,7 @@ class Generation_data():
         E = Function(self.VV)
         E.vector()[:] = np.exp(self.random_process.random_field)
         if(plotField):
-            File("elasticity_gp0.pvd") << E
+            File(fieldFileName) << E
         mu, lmbda = E/(2*(1 + self.nu)), E * self.nu/((1 + self.nu)*(1 - 2 * self.nu))
         ########################################################
 
@@ -153,15 +155,29 @@ class Generation_data():
 
         return Force
 
-N=1 #number of experiments
-Data_i=[]
-data_realization = Generation_data(N = 5, mkl = 10)
+numSamples=12 #number of experiments
+
+loadRandomField = True
+
+compressionTest = True
+
+Data_compression=[]
+data_realization = Generation_data(N = 10, mkl = 100)
 
 data_realization.computeEigenVectors()
 
-np.random.seed(123) # Fix seed to generates same experiments each time.
+if(loadRandomField == False):
+    np.random.seed(123) # Fix seed to generates same experiments each time.
+    param = np.random.normal(size=(data_realization.mkl, numSamples))
+else:
+    param = cPickle.load( open( "randomfield.p", "rb" ) )
 
-param = np.random.normal(size=(data_realization.mkl, N))
+for i in range(numSamples): # Generate Synthetic data for each experiment
+    if(compressionTest == True):
+        Data_compression.append(data_realization.apply(param[:,i], plotField = True, fieldFileName = "RandomField_" + str(i) + ".pvd"))
+    # Data_twist
 
-for i in range(N): # Generate Synthetic data for each experiment
-    Data_i.append(data_realization.apply(param[:,i]), plotField = True, fieldFileName = ("RandomField" + str(i) + ".vtu"))
+if(loadRandomField == False):
+    cPickle.dump(param, open( "randomfield.p", "wb" ) )
+
+cPickle.dump(Data_compression, open( "CompressionData.p", "wb" ) )
