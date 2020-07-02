@@ -151,9 +151,6 @@ class Generation_data():
                     print(Force_top)
                     Force.append(Force_top)
 
-        #file = File("dispo.pvd");
-        #file << u;
-
         return Force
 
 N=1 #number of experiments
@@ -167,4 +164,4 @@ np.random.seed(123) # Fix seed to generates same experiments each time.
 param = np.random.normal(size=(data_realization.mkl, N))
 
 for i in range(N): # Generate Synthetic data for each experiment
-    Data_i.append(data_realization.apply(param[:,i]))
+    Data_i.append(data_realization.apply(param[:,i]), plotField = True, fieldFileName = ("RandomField" + str(i) + ".vtu"))
