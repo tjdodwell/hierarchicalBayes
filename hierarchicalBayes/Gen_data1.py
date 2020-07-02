@@ -157,7 +157,7 @@ class Generation_data():
 
 numSamples=12 #number of experiments
 
-loadRandomField = True
+loadRandomField = False
 
 compressionTest = True
 
