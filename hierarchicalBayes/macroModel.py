@@ -136,6 +136,6 @@ class MacroModel():
         return -np.sum((np.asarray(Force) - np.asarray(self.data))**2)/ (2.0 * self.sigma_f**2)
 
 
-compress_data = cPickle.load( open( "CompressionData.p", "rb" ) )
+#compress_data = cPickle.load( open( "CompressionData.p", "rb" ) )
 
-numExperiments = len(compress_data)
+#numExperiments = len(compress_data)
