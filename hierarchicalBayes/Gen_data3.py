@@ -49,7 +49,7 @@ class Generation_data():
         self.V = VectorFunctionSpace(self.mesh, "Lagrange", 1)
 
         self.loadSteps = 10   # cube [1,1,1] is pressed by 0.2 on top
-        self.delta = 0.02
+        self.delta = 0.05
 
         self.verbosity = True
 
@@ -132,7 +132,7 @@ class Generation_data():
                         print("Load step - " + str(i))
 
                     # Update non-homogeneous boundary condition for current load step
-                    r = Constant((0.0, 0.0, -i * self.delta))
+                    r = Constant((i * self.delta, 0.0, 0.0))
                     bc_top = DirichletBC(self.V, r, self.top)
                     bcs = [self.bc_bottom, bc_top]
 
@@ -152,7 +152,7 @@ class Generation_data():
 
                     print(Force_top)
                     Force.append(Force_top)
-        #file = File("press_git.pvd");
+        #file = File("sear_git.pvd");
         #file << u;            
 
         return Force

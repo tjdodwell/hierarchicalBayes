@@ -21,6 +21,7 @@ import random as rnd
 import seaborn as sns
 from typing import Tuple, List, Optional
 from scipy.stats import norm
+
 import Gen_data3
 import _pickle as cPickle
 
@@ -124,6 +125,7 @@ class HyperElastic():
         
         
         ####################################################
+        '''
         # Elasticity parameters
         E, nu = 10.0, 0.3
         mu, lmbda = Constant(E/(2*(1 + nu))), Constant(E*nu/((1 + nu)*(1 - 2*nu)))
@@ -137,17 +139,18 @@ class HyperElastic():
         axial_model = 0.25 * Es * phi0 * (L - ln(L))
         
         psi = (mu/2)*(Ic - 3) - mu*ln(J) + (lmbda/2)*(ln(J))**2 + normal_compaction_model+axial_model
+        '''
         ####################################################
         W=0
-        #C_10 = theta[0]
-        #C_01 = theta[1]
+        C_10 = theta[0]
+        C_01 = theta[1]
         
         
-        #W = C_01*(I2_bar-3) + C_10*(I1_bar - 3)
+        W = C_01*(I2_bar-3) + C_10*(I1_bar - 3) + 0.05*(J-2)**2
 
         # Total potential energy
-        #Pi = W*dx - dot(B, u)*dx - dot(T, u)*ds
-        Pi = psi*dx - dot(B, u)*dx - dot(T, u)*ds
+        Pi = W*dx - dot(B, u)*dx - dot(T, u)*ds
+        #Pi = psi*dx - dot(B, u)*dx - dot(T, u)*ds
 
         # Compute first variation of Pi (directional derivative about u in the direction of v)
         F = derivative(Pi, u, v)
@@ -204,11 +207,11 @@ class HyperElastic():
 ##############################################################################################################
     def singleGP(self, data, delta,loadSteps, verbosity, saveSolution):
         #########################################
-        #xlimits = np.array([[1,60], [0,10]])   #for polynomial Mooney Rivlin
-        xlimits = np.array([[15,25], [0,5]])
+        xlimits = np.array([[1,60], [0,10]])   #for polynomial Mooney Rivlin
+        #xlimits = np.array([[1,20], [0,5]])
         sampling = LHS(xlimits=xlimits)
 
-        train_number =200
+        train_number =100
         theta = sampling(train_number)        
         ########################################
         
@@ -284,16 +287,16 @@ N=3 #number of experiments
 Data_i=[]
 #for l in range(N): # Generate Synthetic data for each experiment
 #    Data_i.append(genData(data))
-data_realization = Gen_data3.Generation_data()
+data_realization = Gen_data1.Generation_data()
 
 for l in range(N): # Generate Synthetic data for each experiment
     #theta_real =np.array( [np.random.normal(phi_real[0],phi_real[1]),np.random.normal(phi_real[2],phi_real[3])])  
     #Data_i.append(data_realization.apply(theta_real,1,5,True,True))
     Data_i.append(data_realization.apply())
 '''
-#################################################################################################################
+####################################################################################################################
 #data generation
-numSamples=12 #number of experiments
+numSamples=3 #number of experiments
 
 loadRandomField = False
 
@@ -322,15 +325,12 @@ cPickle.dump(Data_compression, open( "CompressionData.p", "wb" ) )
 
 
 ####################################################################################################################
-
-
-#################################################################################################################
 loadSteps = 10
 delta = 0.02
 saveSolution = True
 verbosity = True
 
-myModel = HyperElastic(Data_i)
+myModel = HyperElastic(Data_compression)
 
 
 
@@ -353,7 +353,7 @@ user_function, integral_bounds = myModel.press_fem()
 
 
 tr=myModel.trainAll(delta,loadSteps,verbosity,saveSolution)
-'''
+
 ######################################################################################################
 ndraws = 3000  # number of draws from the distribution
 phi=np.zeros((ndraws,4))
@@ -376,7 +376,7 @@ phi[0]=[20,1,1,0.1]
 #theta =np.array( [np.random.normal(phi[0][0],phi[0][1]),np.random.normal(phi[0][2],phi[0][3])])
 #theta=abs(theta)
 #logLikelihood = myModel.log_likelihood(Data_i,phi[0],1,5,True,True)
-logLikelihood = myModel.logLike(Data_i,phi[0],delta,loadSteps, verbosity, saveSolution)
+logLikelihood = myModel.logLike(Data_compression,phi[0],delta,loadSteps, verbosity, saveSolution)
 
 for it in range(1,ndraws):
     prop_phi[it][0]=np.sqrt(1-sigma1_sq_it**2)*phi[it-1][0] + 5*sigma1_sq_it*float(truncnorm.rvs(-1,1,size=1))    
@@ -405,7 +405,7 @@ for it in range(1,ndraws):
     #prop_logLikelihood=np.log(prop_likelihood)
     
     #prop_logLikelihood = myModel.log_likelihood(Data_i,prop_phi[it],1,5,True,True)
-    prop_logLikelihood = myModel.logLike(Data_i,prop_phi[it],delta,loadSteps, verbosity, saveSolution)
+    prop_logLikelihood = myModel.logLike(Data_compression,prop_phi[it],delta,loadSteps, verbosity, saveSolution)
 
 
     alpha= prop_logLikelihood -logLikelihood
@@ -426,7 +426,7 @@ for it in range(1,ndraws):
            #theta[it] = theta[it-1]
 
 
-'''
+
 
 
 
